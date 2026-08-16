@@ -1,3 +1,5 @@
 # Streamlit needs these to run the app.
 # Pin the same version you tested locally so the cloud behaves identically.
 streamlit==1.61.1
+# used by the edit panel to publish your changes to GitHub
+requests==2.32.5

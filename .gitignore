@@ -2,3 +2,6 @@
 __pycache__/
 *.pyc
 .DS_Store
+
+# your local passwords / GitHub token (only on your PC)
+.streamlit/secrets.toml

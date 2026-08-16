@@ -27,9 +27,12 @@
 import base64                # turns her photo / the music into text the
                              # browser can display without needing a server
 import html                  # keeps your message safe inside the HTML
+import json                  # saves your edits into config.json
 import mimetypes             # figures out the type of your photo/music
 import os                    # checks whether the photo/music files exist
+import secrets               # safe password comparison
 
+import requests              # lets your edits be pushed up to GitHub
 import streamlit as st                       # the web app framework
 import streamlit.components.v1 as components # lets us inject our own
                                              # HTML + CSS + JavaScript
@@ -52,6 +55,29 @@ LOVE_MESSAGE = (
 PHOTO_FILE = "my_love.jpg"   # ← her picture (jpg or png)
 MUSIC_FILE = "music.mp3"     # ← soft background music (any mp3)
 
+# ══════════════════════════════════════════════════════════════════════
+# ✏️  EDIT ME #3  —  WHERE YOUR EDITS ARE PUBLISHED TO
+#    The app already lives in a GitHub repo. When you use the secret
+#    "edit panel" (bottom of this page) it pushes your changes back to
+#    GitHub, which makes Streamlit rebuild — so she sees your edits.
+#    Set these to YOUR GitHub username and the repo name.
+# ══════════════════════════════════════════════════════════════════════
+GITHUB_OWNER = "rukundomichel"   # your GitHub username
+GITHUB_REPO  = "for-you"         # the repo the app is deployed from
+GITHUB_BRANCH = "main"           # which branch Streamlit watches
+
+# a small file that holds your latest message (your edits are saved here)
+CONFIG_FILE = "config.json"
+
+# ══════════════════════════════════════════════════════════════════════
+#  ✏️  EDIT ME #4  —  YOUR SECRET EDIT-PANEL PASSWORD
+#     ⚠️  Please change this! Put a strong password in Streamlit Cloud
+#     "Advanced settings → Secrets" as  ADMIN_PASSWORD = "yourpassword"
+#     and it wins over this default. The default below is only a
+#     fallback so the app works out of the box.
+# ══════════════════════════════════════════════════════════════════════
+DEFAULT_ADMIN_PASSWORD = "iloveyou"
+
 # ──────────────────────────────────────────────────────────────────────
 # nice tab title + small heart icon shown in the browser tab
 # ──────────────────────────────────────────────────────────────────────
@@ -60,6 +86,24 @@ st.set_page_config(
     page_icon="💗",
     layout="centered",
 )
+
+
+# ──────────────────────────────────────────────────────────────────────
+# tiny helpers to read the admin password + GitHub token from secrets
+# (Streamlit Cloud "Secrets", or the local .streamlit/secrets.toml file)
+# ──────────────────────────────────────────────────────────────────────
+def _secret(key: str) -> str | None:
+    """Looks a value up in Streamlit secrets (or environment variables)."""
+    try:
+        if key in st.secrets:
+            return str(st.secrets[key])
+    except Exception:
+        pass
+    return os.environ.get(key)
+
+
+ADMIN_PASSWORD = _secret("ADMIN_PASSWORD") or DEFAULT_ADMIN_PASSWORD
+GITHUB_TOKEN = _secret("GITHUB_TOKEN")   # None → edits stay local only
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -481,17 +525,47 @@ def build_html(message: str, photo_uri: str, music_uri: str | None) -> str:
 #  PUTTING IT ALL TOGETHER — the actual page that runs
 # ══════════════════════════════════════════════════════════════════════
 
+# ──────────────────────────────────────────────────────────────────────
+#  load your latest message from config.json (your previous edit),
+#  or fall back to the LOVE_MESSAGE in the code if it's not there yet
+# ──────────────────────────────────────────────────────────────────────
+def load_message() -> str:
+    """Returns the message saved in config.json, or the code default."""
+    try:
+        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+            saved = json.load(f).get("message")
+        return saved if saved else LOVE_MESSAGE
+    except Exception:
+        return LOVE_MESSAGE
+
+
+current_message = load_message()
+
+# work out which photo / music files exist (handles my_love.jpg, my_love.png,
+# music.mp3 … whatever you uploaded through the edit panel)
+photo_path = PHOTO_FILE
+music_path = MUSIC_FILE
+for base, default in ((os.path.splitext(PHOTO_FILE)[0], PHOTO_FILE),
+                      (os.path.splitext(MUSIC_FILE)[0], MUSIC_FILE)):
+    import glob
+    found = glob.glob(base + ".*")
+    if found:
+        if "love" in base:
+            photo_path = found[0]
+        else:
+            music_path = found[0]
+
 # 1) get her photo as a data URI (or the cute placeholder if missing)
-photo_uri = image_to_data_uri(PHOTO_FILE)
+photo_uri = image_to_data_uri(photo_path)
 if photo_uri is None:
     photo_uri = placeholder_photo_uri()
 
 # 2) get the music as a data URI (or None if missing)
-music_uri = audio_to_data_uri(MUSIC_FILE)
+music_uri = audio_to_data_uri(music_path)
 
 # 3) build the whole page with the real message + photo + music inside
 page_html = build_html(
-    message=html.escape(LOVE_MESSAGE),   # keeps your message text safe
+    message=html.escape(current_message),  # keeps your message text safe
     photo_uri=photo_uri,
     music_uri=music_uri,
 )
@@ -500,7 +574,110 @@ page_html = build_html(
 components.html(page_html, height=1000, scrolling=False)
 
 # 5) small helper hints — only appear while a file is still missing
-if not os.path.exists(PHOTO_FILE):
-    st.caption("💡 Tip: drop a file named `my_love.jpg` next to app.py to show her photo.")
-if not os.path.exists(MUSIC_FILE):
-    st.caption("💡 Tip: drop a file named `music.mp3` next to app.py to add soft music.")
+if photo_uri is None or photo_path == PHOTO_FILE and not os.path.exists(PHOTO_FILE):
+    st.caption("💡 Use the edit panel below to add her photo.")
+if not os.path.exists(music_path):
+    st.caption("💡 Use the edit panel below to add soft music.")
+
+
+# ══════════════════════════════════════════════════════════════════════
+#  THE EDIT PANEL — password-protected, so only you see it.
+#
+#  • change the love message (no code needed!)
+#  • upload her photo and/or soft music
+#  • press "Save & publish" and your changes go straight to GitHub,
+#    which makes Streamlit rebuild the cloud app — she sees your edits
+#    when she opens (or refreshes) the link.
+# ══════════════════════════════════════════════════════════════════════
+
+# pushes one file to GitHub using the GitHub API
+def github_push(path: str, content: bytes, commit_message: str) -> bool:
+    """Uploads or updates a file in the repo. Returns True on success."""
+    encoded = base64.b64encode(content).decode("utf-8")
+    url = f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/contents/{path}"
+    headers = {
+        "Authorization": f"Bearer {GITHUB_TOKEN}",
+        "Accept": "application/vnd.github+json",
+    }
+    # GitHub needs the current file's sha before it lets us overwrite it
+    resp = requests.get(url, headers=headers)
+    sha = resp.json().get("sha") if resp.status_code == 200 else None
+    data = {"message": commit_message, "content": encoded}
+    if sha:
+        data["sha"] = sha
+    resp = requests.put(url, headers=headers, json=data)
+    return resp.status_code in (200, 201)
+
+
+st.divider()
+
+with st.expander("🔒 For you only — edit panel"):
+    # ask for the password (hide it — prying eyes may be watching 😉)
+    password = st.text_input("Password", type="password", key="admin_pw")
+
+    if password:
+        if secrets.compare_digest(password, ADMIN_PASSWORD):
+            st.success("Welcome back, Michel ❤️")
+
+            # the fields you can edit without touching any code
+            new_message = st.text_area(
+                "Love message",
+                value=current_message,
+                height=160,
+                help="This is what she sees in the white card.",
+            )
+            new_photo = st.file_uploader(
+                "Her photo (jpg or png)",
+                type=["jpg", "jpeg", "png"],
+                key="new_photo",
+                help="Optional — replaces the photo frame picture.",
+            )
+            new_music = st.file_uploader(
+                "Soft music (mp3)",
+                type=["mp3"],
+                key="new_music",
+                help="Optional — soft background music with a toggle.",
+            )
+
+            if st.button("💾 Save & publish", type="primary"):
+                # a) save the new message into config.json
+                with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+                    json.dump({"message": new_message}, f,
+                              ensure_ascii=False, indent=2)
+                changed_files = [CONFIG_FILE]
+
+                # b) save the uploaded photo / music into this folder
+                if new_photo is not None:
+                    ext = os.path.splitext(new_photo.name)[1].lower() or ".jpg"
+                    photo_path = "my_love" + ext
+                    with open(photo_path, "wb") as f:
+                        f.write(new_photo.getbuffer())
+                    changed_files.append(photo_path)
+                if new_music is not None:
+                    ext = os.path.splitext(new_music.name)[1].lower() or ".mp3"
+                    music_path = "music" + ext
+                    with open(music_path, "wb") as f:
+                        f.write(new_music.getbuffer())
+                    changed_files.append(music_path)
+
+                # c) push everything up to GitHub so the cloud rebuilds
+                if GITHUB_TOKEN:
+                    all_ok = True
+                    for file_name in changed_files:
+                        with open(file_name, "rb") as f:
+                            if not github_push(file_name, f.read(),
+                                               "For You ❤️ edit"):
+                                all_ok = False
+                    if all_ok:
+                        st.success("Published! She'll see it in about a minute 💕")
+                    else:
+                        st.error("Couldn't reach GitHub — saved here, but the "
+                                 "publish failed. Check your GITHUB_TOKEN.")
+                else:
+                    st.warning("Saved locally. Add a `GITHUB_TOKEN` secret in "
+                               "Streamlit Cloud to publish to her side.")
+
+                # rebuild the page right away with the new content
+                st.rerun()
+        else:
+            st.error("Wrong password, sorry.")
