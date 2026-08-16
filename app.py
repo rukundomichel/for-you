@@ -100,6 +100,10 @@ st.markdown(
       #MainMenu {visibility: hidden;}
       header[data-testid="stHeader"] {display: none;}
       footer {visibility: hidden;}
+      [data-testid="stStatusWidget"] {display: none;}
+      [data-testid="stToolbar"] {display: none;}
+      [data-testid="stDeployButton"] {display: none;}
+      [data-testid="stBottom"] {display: none;}
     </style>
     """,
     unsafe_allow_html=True,
