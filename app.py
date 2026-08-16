@@ -576,12 +576,6 @@ page_html = build_html(
 # 4) show it! scrolling=False keeps it looking like a clean full page
 components.html(page_html, height=1000, scrolling=False)
 
-# 5) small helper hints — only appear while a file is still missing
-if photo_uri is None or photo_path == PHOTO_FILE and not os.path.exists(PHOTO_FILE):
-    st.caption("💡 Use the edit panel below to add her photo.")
-if not os.path.exists(music_path):
-    st.caption("💡 Use the edit panel below to add soft music.")
-
 
 # ══════════════════════════════════════════════════════════════════════
 #  THE EDIT PANEL — password-protected, so only you see it.
