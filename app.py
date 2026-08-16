@@ -24,6 +24,9 @@
 # ──────────────────────────────────────────────────────────────────────
 # imports
 # ──────────────────────────────────────────────────────────────────────
+# lets modern type hints like "str | None" work on every Python version
+from __future__ import annotations
+
 import base64                # turns her photo / the music into text the
                              # browser can display without needing a server
 import html                  # keeps your message safe inside the HTML

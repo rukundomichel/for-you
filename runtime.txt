@@ -1,0 +1,2 @@
+# Tells Streamlit Cloud which Python version to use for the build.
+python-3.12
