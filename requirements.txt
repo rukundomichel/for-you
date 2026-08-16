@@ -1,0 +1,3 @@
+# Streamlit needs these to run the app.
+# Pin the same version you tested locally so the cloud behaves identically.
+streamlit==1.61.1

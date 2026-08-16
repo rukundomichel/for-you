@@ -1,0 +1,10 @@
+# Streamlit theme — soft pink + white, so even the app frame looks cute.
+# You can tweak these colours; the app itself reads its own colours from
+# the CSS inside app.py, but this keeps the surrounding bits matching.
+
+[theme]
+primaryColor = "#f472b6"        # pink (buttons, links)
+backgroundColor = "#fff5f7"     # white with a whisper of pink
+secondaryBackgroundColor = "#fce7f3"  # pale pink panels
+textColor = "#831843"           # deep plum pink text
+font = "sans serif"

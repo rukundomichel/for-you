@@ -1,0 +1,4 @@
+# Things that should never be uploaded to GitHub
+__pycache__/
+*.pyc
+.DS_Store
