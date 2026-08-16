@@ -621,75 +621,84 @@ def github_push(path: str, content: bytes, commit_message: str) -> bool:
     return resp.status_code in (200, 201)
 
 
-st.divider()
+# ══════════════════════════════════════════════════════════════════════
+#  OWNER MODE — the edit panel appears ONLY when the link ends with
+#  ?owner=1   (e.g.  https://your-app.streamlit.app/?owner=1)
+#  She opens the plain link and never even sees the edit panel.
+#  (The password below is an extra lock on top of that.)
+# ══════════════════════════════════════════════════════════════════════
+is_owner = st.query_params.get("owner") == "1"
 
-with st.expander("🔒 For you only — edit panel"):
-    # ask for the password (hide it — prying eyes may be watching 😉)
-    password = st.text_input("Password", type="password", key="admin_pw")
+if is_owner:
+    st.divider()
 
-    if password:
-        if secrets.compare_digest(password, ADMIN_PASSWORD):
-            st.success("Welcome back, Michel ❤️")
+    with st.expander("🔒 For you only — edit panel"):
+        # ask for the password (hide it — prying eyes may be watching 😉)
+        password = st.text_input("Password", type="password", key="admin_pw")
 
-            # the fields you can edit without touching any code
-            new_message = st.text_area(
-                "Love message",
-                value=current_message,
-                height=160,
-                help="This is what she sees in the white card.",
-            )
-            new_photo = st.file_uploader(
-                "Her photo (jpg or png)",
-                type=["jpg", "jpeg", "png"],
-                key="new_photo",
-                help="Optional — replaces the photo frame picture.",
-            )
-            new_music = st.file_uploader(
-                "Soft music (mp3)",
-                type=["mp3"],
-                key="new_music",
-                help="Optional — soft background music with a toggle.",
-            )
+        if password:
+            if secrets.compare_digest(password, ADMIN_PASSWORD):
+                st.success("Welcome back, Michel ❤️")
 
-            if st.button("💾 Save & publish", type="primary"):
-                # a) save the new message into config.json
-                with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-                    json.dump({"message": new_message}, f,
-                              ensure_ascii=False, indent=2)
-                changed_files = [CONFIG_FILE]
+                # the fields you can edit without touching any code
+                new_message = st.text_area(
+                    "Love message",
+                    value=current_message,
+                    height=160,
+                    help="This is what she sees in the white card.",
+                )
+                new_photo = st.file_uploader(
+                    "Her photo (jpg or png)",
+                    type=["jpg", "jpeg", "png"],
+                    key="new_photo",
+                    help="Optional — replaces the photo frame picture.",
+                )
+                new_music = st.file_uploader(
+                    "Soft music (mp3)",
+                    type=["mp3"],
+                    key="new_music",
+                    help="Optional — soft background music with a toggle.",
+                )
 
-                # b) save the uploaded photo / music into this folder
-                if new_photo is not None:
-                    ext = os.path.splitext(new_photo.name)[1].lower() or ".jpg"
-                    photo_path = "my_love" + ext
-                    with open(photo_path, "wb") as f:
-                        f.write(new_photo.getbuffer())
-                    changed_files.append(photo_path)
-                if new_music is not None:
-                    ext = os.path.splitext(new_music.name)[1].lower() or ".mp3"
-                    music_path = "music" + ext
-                    with open(music_path, "wb") as f:
-                        f.write(new_music.getbuffer())
-                    changed_files.append(music_path)
+                if st.button("💾 Save & publish", type="primary"):
+                    # a) save the new message into config.json
+                    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+                        json.dump({"message": new_message}, f,
+                                  ensure_ascii=False, indent=2)
+                    changed_files = [CONFIG_FILE]
 
-                # c) push everything up to GitHub so the cloud rebuilds
-                if GITHUB_TOKEN:
-                    all_ok = True
-                    for file_name in changed_files:
-                        with open(file_name, "rb") as f:
-                            if not github_push(file_name, f.read(),
-                                               "For You ❤️ edit"):
-                                all_ok = False
-                    if all_ok:
-                        st.success("Published! She'll see it in about a minute 💕")
+                    # b) save the uploaded photo / music into this folder
+                    if new_photo is not None:
+                        ext = os.path.splitext(new_photo.name)[1].lower() or ".jpg"
+                        photo_path = "my_love" + ext
+                        with open(photo_path, "wb") as f:
+                            f.write(new_photo.getbuffer())
+                        changed_files.append(photo_path)
+                    if new_music is not None:
+                        ext = os.path.splitext(new_music.name)[1].lower() or ".mp3"
+                        music_path = "music" + ext
+                        with open(music_path, "wb") as f:
+                            f.write(new_music.getbuffer())
+                        changed_files.append(music_path)
+
+                    # c) push everything up to GitHub so the cloud rebuilds
+                    if GITHUB_TOKEN:
+                        all_ok = True
+                        for file_name in changed_files:
+                            with open(file_name, "rb") as f:
+                                if not github_push(file_name, f.read(),
+                                                   "For You ❤️ edit"):
+                                    all_ok = False
+                        if all_ok:
+                            st.success("Published! She'll see it in about a minute 💕")
+                        else:
+                            st.error("Couldn't reach GitHub — saved here, but the "
+                                     "publish failed. Check your GITHUB_TOKEN.")
                     else:
-                        st.error("Couldn't reach GitHub — saved here, but the "
-                                 "publish failed. Check your GITHUB_TOKEN.")
-                else:
-                    st.warning("Saved locally. Add a `GITHUB_TOKEN` secret in "
-                               "Streamlit Cloud to publish to her side.")
+                        st.warning("Saved locally. Add a `GITHUB_TOKEN` secret in "
+                                   "Streamlit Cloud to publish to her side.")
 
-                # rebuild the page right away with the new content
-                st.rerun()
-        else:
-            st.error("Wrong password, sorry.")
+                    # rebuild the page right away with the new content
+                    st.rerun()
+            else:
+                st.error("Wrong password, sorry.")
