@@ -49,6 +49,10 @@ LOVE_MESSAGE = (
     "You make my days better. - Michel"
 )
 
+# the small line under the photo — leave empty ("") to hide it.
+# You can also set it anytime from the edit panel (optional).
+DEFAULT_SIGNATURE = ""
+
 # ══════════════════════════════════════════════════════════════════════
 # ✏️  EDIT ME #2  —  HER PHOTO + THE MUSIC
 #    Just drop the files with these exact names into the same folder
@@ -205,9 +209,15 @@ def placeholder_photo_uri() -> str:
 #  bottom of this file, so we never have to fight with curly braces in
 #  the CSS/JavaScript.
 # ══════════════════════════════════════════════════════════════════════
-def build_html(message: str, photo_uri: str, music_uri: str | None) -> str:
+def build_html(message: str, photo_uri: str, music_uri: str | None,
+               signature: str = "") -> str:
     """Puts together the full page HTML. Nothing inside here is secret —
        it is all plain HTML you can read like a recipe."""
+
+    # the little line under the photo — only shown when a signature is set
+    signature_html = (
+        f'<p class="signature">{signature}</p>' if signature else ""
+    )
 
     # does music exist? we tell the JavaScript so it can show/hide the
     # little music button and only try to play when there is a file
@@ -427,7 +437,7 @@ def build_html(message: str, photo_uri: str, music_uri: str | None) -> str:
         <img src="{photo_uri}" alt="my love">
       </div>
 
-      <p class="signature">made with ❤️ for you</p>
+      <p class="signature">{signature_html}</p>
     </div>
 
   </div>
@@ -569,7 +579,18 @@ def load_message() -> str:
         return LOVE_MESSAGE
 
 
+def load_signature() -> str:
+    """Returns the text under the photo ('' = hidden), or the default."""
+    try:
+        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+            saved = json.load(f).get("signature")
+        return saved if saved else DEFAULT_SIGNATURE
+    except Exception:
+        return DEFAULT_SIGNATURE
+
+
 current_message = load_message()
+current_signature = load_signature()
 
 # work out which photo / music files exist (handles my_love.jpg, my_love.png,
 # music.mp3 … whatever you uploaded through the edit panel)
@@ -598,6 +619,7 @@ page_html = build_html(
     message=html.escape(current_message),  # keeps your message text safe
     photo_uri=photo_uri,
     music_uri=music_uri,
+    signature=html.escape(current_signature),
 )
 
 # 4) show it! scrolling=False keeps it looking like a clean full page
@@ -697,11 +719,17 @@ if is_owner:
                     key="new_music",
                     help="Optional — soft background music with a toggle.",
                 )
+                new_signature = st.text_input(
+                    "Text under the photo (optional)",
+                    value=current_signature,
+                    help="Optional — shown under the photo. Leave empty to hide it.",
+                )
 
                 if st.button("💾 Save & publish", type="primary"):
                     # a) save the new message into config.json
                     with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-                        json.dump({"message": new_message}, f,
+                        json.dump({"message": new_message,
+                                   "signature": new_signature}, f,
                                   ensure_ascii=False, indent=2)
                     changed_files = [CONFIG_FILE]
 
