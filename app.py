@@ -90,6 +90,21 @@ st.set_page_config(
     layout="centered",
 )
 
+# ──────────────────────────────────────────────────────────────────────
+#  hide Streamlit's own menu / header / footer so the page looks like
+#  a clean, full-screen pink app (no "Manage", no "Deploy", no "⋮")
+# ──────────────────────────────────────────────────────────────────────
+st.markdown(
+    """
+    <style>
+      #MainMenu {visibility: hidden;}
+      header[data-testid="stHeader"] {display: none;}
+      footer {visibility: hidden;}
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 
 # ──────────────────────────────────────────────────────────────────────
 # tiny helpers to read the admin password + GitHub token from secrets

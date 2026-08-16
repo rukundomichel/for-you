@@ -8,3 +8,7 @@ backgroundColor = "#fff5f7"     # white with a whisper of pink
 secondaryBackgroundColor = "#fce7f3"  # pale pink panels
 textColor = "#831843"           # deep plum pink text
 font = "sans serif"
+
+# don't show the little sidebar hamburger / page navigation
+[client]
+showSidebarNavigation = false
