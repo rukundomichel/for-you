@@ -104,6 +104,10 @@ st.markdown(
       [data-testid="stToolbar"] {display: none;}
       [data-testid="stDeployButton"] {display: none;}
       [data-testid="stBottom"] {display: none;}
+      /* the "Hosted with Streamlit" badge (its class names change each
+         Streamlit version, so we target every known variant) */
+      [class*="viewerBadge"] {display: none !important;}
+      [class*="ViewerBadge"] {display: none !important;}
     </style>
     """,
     unsafe_allow_html=True,
@@ -594,6 +598,28 @@ page_html = build_html(
 
 # 4) show it! scrolling=False keeps it looking like a clean full page
 components.html(page_html, height=1000, scrolling=False)
+
+# 5) safety net: the "Hosted with Streamlit" badge re-appears whenever the
+#    page re-renders, so this tiny script keeps sweeping it away.
+components.html(
+    """
+    <script>
+      function removeBadge() {
+        try {
+          const doc = window.top.document;
+          doc.querySelectorAll('[class*="viewerBadge"]').forEach(e => e.remove());
+          doc.querySelectorAll('[class*="ViewerBadge"]').forEach(e => e.remove());
+          doc.querySelectorAll('[data-testid="stStatusWidget"]').forEach(e => e.remove());
+          doc.querySelectorAll('[data-testid="stToolbar"]').forEach(e => e.remove());
+          doc.querySelectorAll('footer').forEach(e => e.remove());
+        } catch (err) { /* top window not reachable - that's fine */ }
+      }
+      removeBadge();
+      setInterval(removeBadge, 500);
+    </script>
+    """,
+    height=0,
+)
 
 
 # ══════════════════════════════════════════════════════════════════════
