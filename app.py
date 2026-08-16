@@ -108,6 +108,10 @@ st.markdown(
          Streamlit version, so we target every known variant) */
       [class*="viewerBadge"] {display: none !important;}
       [class*="ViewerBadge"] {display: none !important;}
+      /* the "App Creator" widget — the corner avatar/name that points at
+         the GitHub account (data-testid is stable across versions) */
+      [data-testid="appCreatorAvatar"] {display: none !important;}
+      [class*="profileContainer"], [class*="profilePreview"] {display: none !important;}
     </style>
     """,
     unsafe_allow_html=True,
@@ -138,12 +142,12 @@ GITHUB_TOKEN = _secret("GITHUB_TOKEN")   # None → edits stay local only
 #    We do this so the photo can live inside our custom HTML below
 #    (Streamlit's custom HTML runs in a little sandboxed box, and a
 #    data URI is the simplest way to get the image into that box).
-#    The @st.cache_data means we only re-encode it once, not on every
-#    click of the button.
+#    (Deliberately NOT cached — see the function docstring.)
 # ══════════════════════════════════════════════════════════════════════
-@st.cache_data(show_spinner=False)
 def image_to_data_uri(file_path: str) -> str | None:
-    """Returns the photo as a data URI, or None if the file is missing."""
+    """Returns the photo as a data URI, or None if the file is missing.
+    Not cached on purpose: uploading a new picture must show up right away,
+    even if the same file name was used before."""
     if not os.path.exists(file_path):
         return None
     mime = mimetypes.guess_type(file_path)[0] or "image/jpeg"  # type of file
@@ -155,9 +159,9 @@ def image_to_data_uri(file_path: str) -> str | None:
 # ══════════════════════════════════════════════════════════════════════
 #  HELPER 2 — turn the music file into a data URI (same trick as above)
 # ══════════════════════════════════════════════════════════════════════
-@st.cache_data(show_spinner=False)
 def audio_to_data_uri(file_path: str) -> str | None:
-    """Returns the music as a data URI, or None if the file is missing."""
+    """Returns the music as a data URI, or None if the file is missing.
+    Not cached on purpose, same reason as the photo above."""
     if not os.path.exists(file_path):
         return None
     mime = mimetypes.guess_type(file_path)[0] or "audio/mpeg"
@@ -612,6 +616,10 @@ components.html(
           doc.querySelectorAll('[data-testid="stStatusWidget"]').forEach(e => e.remove());
           doc.querySelectorAll('[data-testid="stToolbar"]').forEach(e => e.remove());
           doc.querySelectorAll('footer').forEach(e => e.remove());
+          doc.querySelectorAll('[data-testid="appCreatorAvatar"]').forEach(e => {
+            const box = e.closest('[class*="profileContainer"], [class*="profilePreview"]');
+            (box || e).remove();
+          });
         } catch (err) { /* top window not reachable - that's fine */ }
       }
       removeBadge();
