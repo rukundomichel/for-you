@@ -63,3 +63,27 @@ Works even when your PC is off — it runs in the cloud 24/7.
 
 Small note: free Streamlit Cloud apps fall asleep after inactivity, but
 wake up automatically when she opens the link, so no one will notice.
+
+## Edit without code (the secret edit panel)
+
+You don't need to touch code to change things. Open the deployed app,
+scroll to the bottom and expand **"🔒 For you only — edit panel"**,
+enter your password, then:
+
+- edit the love message,
+- upload her photo (jpg/png),
+- upload soft music (mp3),
+- hit **Save & publish** — the change is pushed to GitHub and the cloud
+  rebuilds automatically, so she sees it when she next opens the link.
+
+To set this up you need two secrets in Streamlit Cloud
+(**Advanced settings → Secrets**):
+
+```
+GITHUB_TOKEN = "paste your token here"      # get it with:  gh auth token
+ADMIN_PASSWORD = "choose-a-strong-password"
+```
+
+Change the default password in `app.py` (`DEFAULT_ADMIN_PASSWORD`) if you
+don't set one in secrets. Local secrets live in `.streamlit/secrets.toml`
+(never uploaded to GitHub).
